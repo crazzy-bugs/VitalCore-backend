@@ -32,8 +32,23 @@ def get_scans():
     limit = int(request.args.get('limit', 10))
     offset = (page - 1) * limit
 
-    query = 'SELECT * FROM scans WHERE filename LIKE ? OR location LIKE ?'
-    params = [f"%{search}%", f"%{search}%"]
+    filters = {
+        'filename': request.args.get('filename'),
+        'location': request.args.get('location'),
+        'timestamp': request.args.get('timestamp')
+    }
+
+    query = 'SELECT * FROM scans WHERE 1=1'
+    params = []
+
+    if search:
+        query += ' AND (filename LIKE ? OR location LIKE ?)'
+        params.extend([f"%{search}%", f"%{search}%"])
+
+    for field, value in filters.items():
+        if value:
+            query += f' AND {field} = ?'
+            params.append(value)
 
     if sort:
         query += f' ORDER BY {sort} {order}'

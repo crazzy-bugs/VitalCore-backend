@@ -56,12 +56,29 @@ def create_notification():
         return jsonify({"message": "Notification created", "notification": notification}), 201
 
 
-# 2. READ: Get all notifications
+# 2. READ: Get all notifications with search, sort, filter, and pagination
 @notifications_bp.route('', methods=['GET'])
 def get_notifications():
+    search = request.args.get('search', '')
+    sort_by = request.args.get('sort_by', 'created_at')
+    sort_order = request.args.get('sort_order', 'DESC')
+    is_read = request.args.get('is_read')
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 10))
+
+    query = 'SELECT * FROM notifications WHERE title LIKE ? OR body LIKE ?'
+    params = [f'%{search}%', f'%{search}%']
+
+    if is_read is not None:
+        query += ' AND is_read = ?'
+        params.append(is_read)
+
+    query += f' ORDER BY {sort_by} {sort_order} LIMIT ? OFFSET ?'
+    params.extend([per_page, (page - 1) * per_page])
+
     with get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM notifications ORDER BY created_at DESC')
+        cursor.execute(query, params)
         rows = cursor.fetchall()
         return jsonify([dict(row) for row in rows])
 

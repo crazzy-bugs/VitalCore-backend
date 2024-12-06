@@ -72,12 +72,30 @@ def create_antivirus():
         return jsonify({"message": "Antivirus record created", "id": cursor.lastrowid}), 201
 
 
-# 2. READ: Get all antivirus records
+# 2. READ: Get all antivirus records with searching, sorting, filtering, and pagination
 @antivirus_bp.route('', methods=['GET'])
 def get_antivirus():
+    search = request.args.get('search')
+    sort_by = request.args.get('sort_by', 'id')
+    sort_order = request.args.get('sort_order', 'asc')
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 10))
+
+    query = 'SELECT * FROM av'
+    params = []
+
+    if search:
+        query += ' WHERE av_name LIKE ? OR ip_address LIKE ? OR custom_field LIKE ?'
+        search_term = f'%{search}%'
+        params.extend([search_term, search_term, search_term])
+
+    query += f' ORDER BY {sort_by} {sort_order.upper()}'
+    query += ' LIMIT ? OFFSET ?'
+    params.extend([per_page, (page - 1) * per_page])
+
     with get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM av')
+        cursor.execute(query, params)
         rows = cursor.fetchall()
         records = []
         for row in rows:
@@ -85,7 +103,17 @@ def get_antivirus():
             record['username'] = decrypt(record['username'])  # Decrypt username
             record['password'] = decrypt(record['password'])  # Decrypt password
             records.append(record)
-        return jsonify(records)
+
+        cursor.execute('SELECT COUNT(*) FROM av')
+        total_records = cursor.fetchone()[0]
+
+    return jsonify({
+        'records': records,
+        'total_records': total_records,
+        'page': page,
+        'per_page': per_page,
+        'total_pages': (total_records + per_page - 1) // per_page
+    })
 
 
 # 3. READ: Get a single antivirus record by ID
