@@ -14,10 +14,10 @@ def init_db():
             CREATE TABLE IF NOT EXISTS scans (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 filename TEXT NOT NULL,
-                location TEXT NOT NULL,
+                filepath TEXT NOT NULL,
                 timestamp INTEGER NOT NULL,
+                avname TEXT DEFAULT NULL,
                 result TEXT DEFAULT NULL,
-                final_result TEXT DEFAULT NULL,
                 scan_logs TEXT DEFAULT NULL,
                 created_at TEXT DEFAULT (datetime('now')),
                 updated_at TEXT DEFAULT (datetime('now'))
