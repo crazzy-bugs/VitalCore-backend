@@ -61,6 +61,19 @@ def init_db():
             )
         ''')
 
+        # Table for file
+        cursor.execute('''
+                CREATE TABLE IF NOT EXISTS files (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    file_path TEXT UNIQUE,
+                    file_hash TEXT,
+                    scan_status TEXT,
+                    virus_name TEXT,
+                    av_name TEXT,
+                    scan_timestamp TEXT
+                )
+            ''')
+
         conn.commit()
 
 
@@ -73,3 +86,6 @@ def get_db():
         yield conn
     finally:
         conn.close()
+
+if __name__ == '__main__':
+    init_db()

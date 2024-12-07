@@ -16,31 +16,6 @@ DB_PATH = '../antivirus.db'
 # Ensure the watch and quarantine folders exist
 os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
-# def initialize_database():
-#     """
-#     Initialize the SQLite database and create the files table if it doesn't exist.
-#     """
-#     try:
-#         with sqlite3.connect(DB_PATH) as conn:
-#             cursor = conn.cursor()
-#             cursor.execute('''
-#                 CREATE TABLE IF NOT EXISTS files (
-#                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-#                     file_path TEXT UNIQUE,
-#                     file_hash TEXT,
-#                     scan_status TEXT,
-#                     virus_name TEXT,
-#                     av_name TEXT,
-#                     scan_timestamp TEXT
-#                 )
-#             ''')
-#             conn.commit()
-#             print("[INFO] Database initialized successfully")
-#     except Exception as e:
-#         print(f"[ERROR] Failed to initialize database: {e}")
-
-# initialize_database()
-
 def compute_file_hash(file_path, chunk_size=65536, retries=3):
     for attempt in range(retries):
         try:
@@ -55,7 +30,7 @@ def compute_file_hash(file_path, chunk_size=65536, retries=3):
     print(f"[ERROR] Unable to compute hash after {retries} attempts for: {file_path}")
     return None
 
-def log_scan_result(file_path, file_hash, scan_status, virus_name, av_name):
+def log_scan_result(file_path, file_hash, scan_status, virus_name, av_name, getdb):
     """
     Log the scan results into the database.
     """
@@ -119,7 +94,7 @@ class WatcherHandler(FileSystemEventHandler):
         if not event.is_directory:
             self.process_event(event.src_path)
 
-def process_file(file_path, username, ip, password, quarantineFolder):
+def process_file(file_path, username, ip, password, quarantineFolder, getdb):
     """
     Send a file to the VM for scanning and handle results.
     """
@@ -136,7 +111,7 @@ def process_file(file_path, username, ip, password, quarantineFolder):
             return
 
         # Check if file has already been scanned with same hash
-        with sqlite3.connect(DB_PATH) as conn:
+        with getdb as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT scan_status FROM files WHERE file_hash = ?", (file_hash,))
             record = cursor.fetchone()
@@ -150,7 +125,7 @@ def process_file(file_path, username, ip, password, quarantineFolder):
         scan_status, virus_name = parse_clamdscan_output(output)
         
         # Log results
-        log_scan_result(file_path, file_hash, scan_status, virus_name, "ClamAV")
+        log_scan_result(file_path, file_hash, scan_status, virus_name, "ClamAV", getdb)
         
         # Handle infected files
         if scan_status == "infected":
@@ -166,7 +141,7 @@ def process_file(file_path, username, ip, password, quarantineFolder):
     except Exception as e:
         print(f"[ERROR] Failed to process file {file_path}: {e}")
 
-def watch_directory(ip, username, password, watchFolder, quarantineFolder ):
+def watch_directory(ip, username, password, watchFolder, quarantineFolder, getdb ):
     """
     Monitor the target folder for new files or folders and process them sequentially.
     """
@@ -182,7 +157,7 @@ def watch_directory(ip, username, password, watchFolder, quarantineFolder ):
     for item in os.listdir(watchFolder):
         file_path = os.path.join(watchFolder, item)
         if os.path.isfile(file_path):
-            process_file(file_path, username, ip, password, quarantineFolder)
+            process_file(file_path, username, ip, password, quarantineFolder, getdb)
             print("finished scanning existing files")
 
     # Start watching for new files
