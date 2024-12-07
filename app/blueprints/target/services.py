@@ -1,0 +1,186 @@
+import os
+import time
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+from fabric import Connection
+from app.database import get_db
+from concurrent.futures import ThreadPoolExecutor
+from threading import Lock
+from flask import current_app
+
+results_lock = Lock()
+
+def test_file(path, username, password, ip, avname):
+    conn = Connection(
+        host=ip,
+        user=username,
+        connect_kwargs={
+            "password": password,
+        },
+    )
+    file = os.path.basename(path)
+    print("Connected to system")
+
+    conn.put(path, file)
+    print("Sent the file")
+    result = conn.run(f'clamdscan {file} --fdpass')
+    parsed_result = parse_clamdscan_output(result)
+    return {avname: parsed_result}
+
+def parse_clamdscan_output(output):
+    """
+    Parse the output of clamdscan to extract scan results.
+    """
+    try:
+        if not output:
+            return "error", "No output received"
+
+        for line in output.splitlines():
+            if ": " in line:
+                file_path, result = line.split(": ", 1)
+                if "FOUND" in result:
+                    virus_name = result.replace("FOUND", "").strip()
+                    return "infected", virus_name
+                elif "OK" in result:
+                    return "clean", None
+
+        return "error", "Unknown scan result"
+
+    except Exception as e:
+        print(f"[ERROR] Failed to parse scan output: {e}")
+        return "error", str(e)
+
+# Insert results into the database
+def insert_scan_results(file_path, avname, result, scan_logs):
+    from app import create_app
+    app = create_app()
+    with app.app_context():
+        db = get_db()
+        cursor = db.cursor()
+
+        query = '''
+        INSERT INTO scans (filename, filepath, timestamp, avname, result, scan_logs)
+        VALUES (?, ?, ?, ?, ?, ?)
+        '''
+        cursor.execute(query, (
+            os.path.basename(file_path),
+            file_path,
+            int(time.time()),
+            avname,
+            result[0],
+            scan_logs,
+        ))
+        db.commit()
+
+# Event handler for new file events
+class FileHandler(FileSystemEventHandler):
+    def __init__(self, credentials, executor):
+        self.credentials = credentials
+        self.executor = executor
+
+    def on_created(self, event):
+        if not event.is_directory:
+            self.process_file(event.src_path)
+
+    def process_file(self, file_path):
+        with ThreadPoolExecutor() as executor:
+            futures = [executor.submit(test_file, file_path, cred["username"], cred["password"], cred["ipaddress"], cred["avname"]) for cred in self.credentials]
+            for future, cred in zip(futures, self.credentials):
+                result = future.result()
+                for avname, scan_result in result.items():
+                    insert_scan_results(file_path, avname, scan_result, str(result))
+
+# Function to process existing files in the folder
+def process_existing_files(folder_path, credentials):
+    for file_name in os.listdir(folder_path):
+        file_path = os.path.join(folder_path, file_name)
+        if os.path.isfile(file_path):
+            FileHandler(credentials, None).process_file(file_path)
+
+# Main function to monitor the folder
+def monitor_folder(folder_path, credentials):
+    print("Checking existing files...")
+    process_existing_files(folder_path, credentials)
+
+    event_handler = FileHandler(credentials, None)
+    observer = Observer()
+    observer.schedule(event_handler, folder_path, recursive=False)
+    observer.start()
+    print(f"Monitoring folder: {folder_path}")
+
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        observer.stop()
+        observer.join()
+        print("\nStopped monitoring.")
+
+
+
+
+def get_recent_files(limit=10):
+    db = get_db()
+    cursor = db.cursor()
+
+    query = '''
+    SELECT id, file_path, file_hash, scan_status, virus_name, av_name, scan_timestamp 
+    FROM files 
+    ORDER BY id DESC 
+    LIMIT ?
+    '''
+    result = cursor.execute(query, (limit,)).fetchall()
+
+    # Convert rows to dictionary format
+    return [
+        {
+            "id": row["id"],
+            "file_path": row["file_path"],
+            "file_hash": row["file_hash"],
+            "scan_status": row["scan_status"],
+            "virus_name": row["virus_name"],
+            "av_name": row["av_name"],
+            "scan_timestamp": row["scan_timestamp"],
+        }
+        for row in result
+    ]
+
+def fetch_last_scan_results(limit=10):
+    """
+    Fetch the last `limit` scan results from the `scans` table.
+    """
+    db = get_db()
+    cursor = db.cursor()
+
+    query = '''
+    SELECT id, filename, filepath, timestamp, avname, result, scan_logs, created_at, updated_at
+    FROM scans
+    ORDER BY id DESC
+    LIMIT ?
+    '''
+    rows = cursor.execute(query, (limit,)).fetchall()
+
+    # Convert rows to dictionary format
+    return [
+        {
+            "id": row["id"],
+            "filename": row["filename"],
+            "filepath": row["filepath"],
+            "timestamp": row["timestamp"],
+            "avname": row["avname"],
+            "result": row["result"],
+            "scan_logs": row["scan_logs"],
+            "created_at": row["created_at"],
+            "updated_at": row["updated_at"],
+        }
+        for row in rows
+    ]
+
+# if __name__ == "__main__":
+# ip = "192.168.29.97"
+# username = "kali"
+# password = "kali"
+# watch = "D:\SIH\Target"
+# quarantine = "D:\SIH\Quarantine"
+
+# watch_directory(ip,username,password,watch,quarantine)
