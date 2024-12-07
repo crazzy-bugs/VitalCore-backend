@@ -8,7 +8,6 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from clamdVM import test_file
 
-# Define constants
 WATCH_FOLDER = "target"
 QUARANTINE_FOLDER = "D:/Test/isolate"
 DB_PATH = os.path.join(os.path.dirname(__file__), 'database', 'scan_results.db')
