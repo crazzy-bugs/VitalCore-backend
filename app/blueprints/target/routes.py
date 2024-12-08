@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import jsonify
 import threading
 from .services import monitor_folder, get_recent_files, fetch_last_scan_results
 from . import target_bp
