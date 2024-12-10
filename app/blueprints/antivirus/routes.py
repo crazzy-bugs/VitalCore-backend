@@ -7,7 +7,7 @@ from .services import (
     update_antivirus_record,
     delete_antivirus_record,
     ping_vm,
-    test_wrapper
+    test_file
 )
 
 
@@ -16,13 +16,18 @@ def add_av():
     data = request.json
     safe_path = "..\..\..\testfiles\test.py"
     malicious_path = "..\..\..\testfiles\testing.exe"
-    def generate():
-        yield from create_antivirus(data)
-        yield from ping_vm(data.get('ip_address'))
-        yield from test_wrapper(data,safe_path)
-        yield from test_wrapper(data,malicious_path)
-    return stream_with_context(generate())
-
+    if create_antivirus(data):
+        if ping_vm(data.get('ip_address')):
+            safe_result = test_file(data,safe_path)
+            malicious_result = test_file(data,malicious_path)
+            if (safe_result == False and malicious_result == False):
+                return {"status": True, "message": "Added Succesfully", "safe_result": safe_result, "malicious_result": malicious_result}, 200
+            else:
+                return {"status": False, "message": "Tests failed", "safe_result": safe_result, "malicious_result": malicious_result}
+        else:
+            return {"status": False, "message": "System not reachable", "safe_result": "", "malicious_result": ""}, 400
+    else:
+        return {"status": True, "message": "Failed to add system", "safe_result": "", "malicious_result": ""}, 400
 
 @antivirus_bp.route('/fetch/all', methods=['GET'])
 def fetch_av():

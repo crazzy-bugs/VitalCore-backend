@@ -22,8 +22,7 @@ def create_antivirus(data):
             VALUES (?, ?, ?, ?, ?, ?, ?)
         ''', (av_name, ip_address, username, password, av_exec_command, av_update_command, custom_field))
         conn.commit()
-        # return {"message": "Antivirus record created", "id": cursor.lastrowid}
-        yield 'Antivirus Created'
+        return {"message": "Antivirus record created", "id": cursor.lastrowid}
 
 def ping_vm(host):
     param = '-n' if platform.system().lower() == 'windows' else '-c'
@@ -35,8 +34,6 @@ def ping_vm(host):
     else:
         return "System is not reachable"
 
-def test_wrapper(data,path):
-    return json.dumps(test_file(data, path))
 
 def test_file(data, path):
     avname = data.get('av_name')
@@ -58,8 +55,21 @@ def test_file(data, path):
     print("Sent the file")
     # result = conn.run(f'clamdscan {file} --fdpass')
     result = conn.run(av_exec_command.format(element=file))
-    parsed_result = parse_clamdscan_output(result)
-    return {avname: parsed_result}
+    parsed_result = parse_output(result)
+    if parsed_result:
+        return result
+    
+def parse_output(result):
+    output = result.stdout.strip().lower()
+    if "found no threats" in output:
+        print("Scan completed: No threats detected.")
+        return False
+    elif "found" in output and "threats" in output:
+        print("Scan completed: Threats detected!")
+        return True
+    else:
+        print("Scan result could not be parsed.")
+        return None
 
 def parse_clamdscan_output(output):
     """
