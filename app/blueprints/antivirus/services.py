@@ -1,5 +1,9 @@
 from app.database import get_db
-
+import subprocess
+import platform
+from fabric import Connection
+import os
+import json
 
 def create_antivirus(data):
     av_name = data.get('av_name')
@@ -18,8 +22,67 @@ def create_antivirus(data):
             VALUES (?, ?, ?, ?, ?, ?, ?)
         ''', (av_name, ip_address, username, password, av_exec_command, av_update_command, custom_field))
         conn.commit()
-        return {"message": "Antivirus record created", "id": cursor.lastrowid}, 201
+        # return {"message": "Antivirus record created", "id": cursor.lastrowid}
+        yield 'Antivirus Created'
 
+def ping_vm(host):
+    param = '-n' if platform.system().lower() == 'windows' else '-c'
+    command = ['ping', param, '1', host]
+    response = subprocess.call(command)
+
+    if response == 0:
+        yield "System is reachable"
+    else:
+        return "System is not reachable"
+
+def test_wrapper(data,path):
+    return json.dumps(test_file(data, path))
+
+def test_file(data, path):
+    avname = data.get('av_name')
+    ip = data.get('ip_address')
+    username = data.get('username')
+    password = data.get('password')
+    av_exec_command = data.get('av_exec_command')
+    conn = Connection(
+        host=ip,
+        user=username,
+        connect_kwargs={
+            "password": password,
+        },
+    )
+    file = os.path.basename(path)
+    print("Connected to system")
+
+    conn.put(path, file)
+    print("Sent the file")
+    # result = conn.run(f'clamdscan {file} --fdpass')
+    result = conn.run(av_exec_command.format(element=file))
+    parsed_result = parse_clamdscan_output(result)
+    return {avname: parsed_result}
+
+def parse_clamdscan_output(output):
+    """
+    Parse the output of clamdscan to extract scan results.
+    """
+    try:
+        if not output:
+            return "error", "No output received"
+
+        for line in output.splitlines():
+            if ": " in line:
+                file_path, result = line.split(": ", 1)
+                if "FOUND" in result:
+                    virus_name = result.replace("FOUND", "").strip()
+                    return "infected", virus_name
+                elif "OK" in result:
+                    return "clean", None
+
+        return "error", "Unknown scan result"
+
+    except Exception as e:
+        print(f"[ERROR] Failed to parse scan output: {e}")
+        return "error", str(e)
 
 def fetch_all_antivirus(search, sort_by, sort_order, page, per_page):
     query = 'SELECT * FROM av'

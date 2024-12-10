@@ -1,19 +1,27 @@
 from . import antivirus_bp
-from flask import jsonify, request
+from flask import jsonify, request, stream_with_context
 from .services import (
     create_antivirus,
     fetch_all_antivirus,
     fetch_antivirus_by_id,
     update_antivirus_record,
     delete_antivirus_record,
+    ping_vm,
+    test_wrapper
 )
 
 
 @antivirus_bp.route('/add', methods=['POST'])
 def add_av():
     data = request.json
-    result, status = create_antivirus(data)
-    return jsonify(result), status
+    safe_path = "D:\Repositories\new-sih\testfiles\test.py"
+    malicious_path = "D:\Repositories\new-sih\testfiles\testing.exe"
+    def generate():
+        yield from create_antivirus(data)
+        yield from ping_vm(data.get('ip_address'))
+        yield from test_wrapper(data,safe_path)
+        yield from test_wrapper(data,malicious_path)
+    return stream_with_context(generate())
 
 
 @antivirus_bp.route('/fetch/all', methods=['GET'])
