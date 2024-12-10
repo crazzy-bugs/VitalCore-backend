@@ -10,6 +10,20 @@ from flask import current_app
 
 results_lock = Lock()
 
+def create_target(data):
+    target_folder = data.get('target_folder')
+    quarantine_folder = data.get('quarantine_folder')
+    unsafe_file_action = data.get('unsafe_file_action')
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO settings (target_folder, quarantine_folder, unsafe_file_action) 
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (target_folder, quarantine_folder, unsafe_file_action))
+        conn.commit()
+        return {"message": "Antivirus record created", "id": cursor.lastrowid}
+
 # Function to test a file for viruses using ClamAV
 def test_file(path, username, password, ip, avname):
     """

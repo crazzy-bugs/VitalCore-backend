@@ -1,12 +1,18 @@
-from flask import jsonify
+from flask import jsonify, request
 import threading
-from .services import monitor_folder, get_recent_files, fetch_last_scan_results
+from .services import monitor_folder, get_recent_files, fetch_last_scan_results, create_target
 from app.database import fetch_latest_credentials, fetch_target_folder  # Import fetch functions
 from . import target_bp
 
 # Global variable to store the process object
 task_thread = None
 function_running = False
+
+
+@target_bp.route('/add', methods=['POST'])
+def add_av():
+    data = request.json
+    return create_target(data)
 
 # Endpoint to run the script
 @target_bp.route('/run', methods=['POST'])
