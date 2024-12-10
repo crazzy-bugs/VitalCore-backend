@@ -54,17 +54,21 @@ def test_file(data, path):
     conn.put(path, file)
     print("Sent the file")
     # result = conn.run(f'clamdscan {file} --fdpass')
-    result = conn.run(av_exec_command.format(element=file))
+    command = fr'"C:\\Program Files\\Windows Defender\\MpCmdRun.exe" -Scan -ScanType 3 -File C:\\Users\\SARTHAK\\{file}'
+    result = conn.run(command)
+    print(result.stdout)
     parsed_result = parse_output(result)
     if parsed_result:
         return result
     
 def parse_output(result):
     output = result.stdout.strip().lower()
-    if ("found no threats" in output) or ("detected: files - 0" in output and "objects 0" in output):
+    # if ("found no threats" in output) or ("detected: files - 0" in output and "objects 0" in output):
+    if "found no threats" in output:
         print("Scan completed: No threats detected.")
         return False
-    elif ("found" in output and "threats" in output) or ("detected: files -" in output or "result=" in output):
+    # elif ("found" in output and "threats" in output) or ("detected: files -" in output or "result=" in output):
+    elif "found" in output and "threats" in output:
         print("Scan completed: Threats detected!")
         return True
     else:

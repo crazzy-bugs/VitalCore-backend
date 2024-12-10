@@ -14,8 +14,8 @@ from .services import (
 @antivirus_bp.route('/add', methods=['POST'])
 def add_av():
     data = request.json
-    safe_path = "..\..\..\testfiles\test.py"
-    malicious_path = "..\..\..\testfiles\testing.exe"
+    safe_path = r"D:\Repositories\new-sih\testfiles\test.py"
+    malicious_path = r"D:\Repositories\new-sih\testfiles\testing.exe"
     if create_antivirus(data):
         if ping_vm(data.get('ip_address')):
             safe_result = test_file(data,safe_path)
