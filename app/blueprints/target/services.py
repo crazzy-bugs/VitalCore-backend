@@ -10,22 +10,38 @@ from flask import current_app
 
 results_lock = Lock()
 
+# Function to test a file for viruses using ClamAV
 def test_file(path, username, password, ip, avname):
-    conn = Connection(
-        host=ip,
-        user=username,
-        connect_kwargs={
-            "password": password,
-        },
-    )
-    file = os.path.basename(path)
-    print("Connected to system")
+    """
+    Connect to a remote system, send the file, and run ClamAV scan.
+    Returns a parsed scan result.
+    """
+    try:
+        conn = Connection(
+            host=ip,
+            user=username,
+            connect_kwargs={
+                "password": password,
+            },
+        )
+        file = os.path.basename(path)
+        print("Connected to system")
 
-    conn.put(path, file)
-    print("Sent the file")
-    result = conn.run(f'clamdscan {file} --fdpass')
-    parsed_result = parse_clamdscan_output(result)
-    return {avname: parsed_result}
+        # Send the file to the remote system
+        conn.put(path, file)
+        print("Sent the file")
+
+        # Run ClamAV scan, allow non-zero exit codes with `warn=True`
+        result = conn.run(f'clamdscan {file} --fdpass', warn=True)
+        print("Scan Completed")
+
+        # Parse and return the result
+        parsed_result = parse_clamdscan_output(result.stdout)
+        return {avname: parsed_result}
+
+    except Exception as e:
+        print(f"[ERROR] Exception occurred while scanning file {path}: {e}")
+        return {avname: ("error", str(e))}
 
 def parse_clamdscan_output(output):
     """
@@ -50,8 +66,11 @@ def parse_clamdscan_output(output):
         print(f"[ERROR] Failed to parse scan output: {e}")
         return "error", str(e)
 
-# Insert results into the database
+# Insert scan results into the database
 def insert_scan_results(file_path, avname, result, scan_logs):
+    """
+    Inserts the scan results into the database.
+    """
     from app import create_app
     app = create_app()
     with app.app_context():
@@ -83,15 +102,25 @@ class FileHandler(FileSystemEventHandler):
             self.process_file(event.src_path)
 
     def process_file(self, file_path):
+        """
+        Processes a file for virus scanning using multiple AV credentials.
+        """
         with ThreadPoolExecutor() as executor:
-            futures = [executor.submit(test_file, file_path, cred["username"], cred["password"], cred["ipaddress"], cred["avname"]) for cred in self.credentials]
+            futures = [
+                executor.submit(test_file, file_path, cred["username"], cred["password"], cred["ipaddress"], cred["avname"])
+                for cred in self.credentials
+            ]
             for future, cred in zip(futures, self.credentials):
                 result = future.result()
                 for avname, scan_result in result.items():
+                    print(f"Scan Result for {file_path} ({avname}): {scan_result}")
                     insert_scan_results(file_path, avname, scan_result, str(result))
 
 # Function to process existing files in the folder
 def process_existing_files(folder_path, credentials):
+    """
+    Scans all existing files in the folder.
+    """
     for file_name in os.listdir(folder_path):
         file_path = os.path.join(folder_path, file_name)
         if os.path.isfile(file_path):
@@ -99,6 +128,9 @@ def process_existing_files(folder_path, credentials):
 
 # Main function to monitor the folder
 def monitor_folder(folder_path, credentials):
+    """
+    Monitors a folder for newly created files and scans them.
+    """
     print("Checking existing files...")
     process_existing_files(folder_path, credentials)
 
@@ -116,10 +148,11 @@ def monitor_folder(folder_path, credentials):
         observer.join()
         print("\nStopped monitoring.")
 
-
-
-
+# Fetch recent files from the database
 def get_recent_files(limit=10):
+    """
+    Retrieves the most recent file scan records.
+    """
     db = get_db()
     cursor = db.cursor()
 
@@ -145,6 +178,7 @@ def get_recent_files(limit=10):
         for row in result
     ]
 
+# Fetch the last scan results
 def fetch_last_scan_results(limit=10):
     """
     Fetch the last `limit` scan results from the `scans` table.
@@ -176,11 +210,11 @@ def fetch_last_scan_results(limit=10):
         for row in rows
     ]
 
+# Example usage:
 # if __name__ == "__main__":
-# ip = "192.168.29.97"
-# username = "kali"
-# password = "kali"
-# watch = "D:\SIH\Target"
-# quarantine = "D:\SIH\Quarantine"
-
-# watch_directory(ip,username,password,watch,quarantine)
+#     ip = "192.168.29.97"
+#     username = "kali"
+#     password = "kali"
+#     watch = "D:/SIH/Target"
+#     credentials = [{"username": username, "password": password, "ipaddress": ip, "avname": "ClamAV"}]
+#     monitor_folder(watch, credentials)

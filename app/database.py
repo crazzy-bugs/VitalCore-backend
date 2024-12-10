@@ -62,35 +62,58 @@ def init_db():
             )
         ''')
 
-        # Table for file
+        # Table for files
         cursor.execute('''
-                CREATE TABLE IF NOT EXISTS files (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    file_path TEXT UNIQUE,
-                    file_hash TEXT,
-                    scan_status TEXT,
-                    virus_name TEXT,
-                    av_name TEXT,
-                    scan_timestamp TEXT
-                )
-            ''')
+            CREATE TABLE IF NOT EXISTS files (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                file_path TEXT UNIQUE,
+                file_hash TEXT,
+                scan_status TEXT,
+                virus_name TEXT,
+                av_name TEXT,
+                scan_timestamp TEXT
+            )
+        ''')
 
         conn.commit()
 
 
 # Context manager for database connection
-# @contextmanager
-# def get_db():
-#     conn = sqlite3.connect(DATABASE)
-#     conn.row_factory = sqlite3.Row  # Allows rows to be returned as dictionaries
-#     try:
-#         yield conn
-#     finally:
-#         conn.close()
-
 def get_db():
     """Get a database connection."""
     if 'db' not in g:
         g.db = sqlite3.connect(DATABASE)
-        g.db.row_factory = sqlite3.Row
+        g.db.row_factory = sqlite3.Row  # Allows rows to be returned as dictionaries
     return g.db
+
+
+def fetch_latest_credentials():
+    """
+    Fetch the latest antivirus credentials (username, password, ip_address, av_name) from the av table.
+    """
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Query to fetch the latest credentials based on the id (descending order)
+        cursor.execute("""
+            SELECT username, password, ip_address, av_name 
+            FROM av 
+            ORDER BY id DESC 
+            LIMIT 1;
+        """)
+        row = cursor.fetchone()
+        
+        if row:
+            return {
+                "username": row["username"],
+                "password": row["password"],
+                "ipaddress": row["ip_address"],
+                "avname": row["av_name"]
+            }
+        else:
+            print("No credentials found in the database.")
+            return None  # If no rows exist
+    except Exception as e:
+        print(f"Error fetching credentials: {e}")
+        return None

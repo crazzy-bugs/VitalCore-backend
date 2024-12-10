@@ -1,6 +1,7 @@
 from flask import jsonify
 import threading
 from .services import monitor_folder, get_recent_files, fetch_last_scan_results
+from app.database import fetch_latest_credentials  # Import the function to fetch credentials
 from . import target_bp
 
 # Global variable to store the process object
@@ -16,16 +17,18 @@ def run_watcher():
 
     function_running = True
     # Replace with your target folder path
-    target_folder = "D:/SIH/Target"
+    target_folder = "D:/Test/hello"
 
-# Replace with your array of credentials
-    credentials = [
-    {"username": "kali", "password": "kali", "ipaddress": "192.168.29.97", "avname": "ClamAV"}
-    ]
+    # Fetch credentials dynamically from the database
+    credentials = fetch_latest_credentials()
+    if not credentials:
+        function_running = False
+        return jsonify({"message": "No credentials found in the database"}), 500
+
     # Start the function in a new thread
-    task_thread = threading.Thread(target=monitor_folder, args=(target_folder, credentials))
+    task_thread = threading.Thread(target=monitor_folder, args=(target_folder, [credentials]))
     task_thread.start()
-    return jsonify({"message": "Function started"}), 200
+    return jsonify({"message": "Function started", "credentials": credentials}), 200
 
 # Endpoint to check if the script is running
 @target_bp.route('/is-running', methods=['GET'])
@@ -50,4 +53,3 @@ def get_latest_scans():
         return jsonify({"success": True, "data": results}), 200
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
-
