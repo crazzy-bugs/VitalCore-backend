@@ -61,10 +61,10 @@ def test_file(data, path):
     
 def parse_output(result):
     output = result.stdout.strip().lower()
-    if "found no threats" in output:
+    if ("found no threats" in output) or ("detected: files - 0" in output and "objects 0" in output):
         print("Scan completed: No threats detected.")
         return False
-    elif "found" in output and "threats" in output:
+    elif ("found" in output and "threats" in output) or ("detected: files -" in output or "result=" in output):
         print("Scan completed: Threats detected!")
         return True
     else:

@@ -20,14 +20,14 @@ def add_av():
         if ping_vm(data.get('ip_address')):
             safe_result = test_file(data,safe_path)
             malicious_result = test_file(data,malicious_path)
-            if (safe_result == False and malicious_result == False):
+            if (safe_result == False and malicious_result == True):
                 return {"status": True, "message": "Added Succesfully", "safe_result": safe_result, "malicious_result": malicious_result}, 200
             else:
                 return {"status": False, "message": "Tests failed", "safe_result": safe_result, "malicious_result": malicious_result}
         else:
             return {"status": False, "message": "System not reachable", "safe_result": "", "malicious_result": ""}, 400
     else:
-        return {"status": True, "message": "Failed to add system", "safe_result": "", "malicious_result": ""}, 400
+        return {"status": False, "message": "Failed to add system", "safe_result": "", "malicious_result": ""}, 400
 
 @antivirus_bp.route('/fetch/all', methods=['GET'])
 def fetch_av():
