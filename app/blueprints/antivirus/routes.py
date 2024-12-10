@@ -14,8 +14,8 @@ from .services import (
 @antivirus_bp.route('/add', methods=['POST'])
 def add_av():
     data = request.json
-    safe_path = "D:\Repositories\new-sih\testfiles\test.py"
-    malicious_path = "D:\Repositories\new-sih\testfiles\testing.exe"
+    safe_path = "..\..\..\testfiles\test.py"
+    malicious_path = "..\..\..\testfiles\testing.exe"
     def generate():
         yield from create_antivirus(data)
         yield from ping_vm(data.get('ip_address'))
