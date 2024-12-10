@@ -1,7 +1,7 @@
 from flask import jsonify
 import threading
 from .services import monitor_folder, get_recent_files, fetch_last_scan_results
-from app.database import fetch_latest_credentials  # Import the function to fetch credentials
+from app.database import fetch_latest_credentials, fetch_target_folder  # Import fetch functions
 from . import target_bp
 
 # Global variable to store the process object
@@ -15,20 +15,22 @@ def run_watcher():
     if function_running:
         return jsonify({"message": "Function is already running"}), 400
 
-    function_running = True
-    # Replace with your target folder path
-    target_folder = "D:/Test/hello"
+    # Fetch the target folder dynamically from the database
+    target_folder = fetch_target_folder()
+    if not target_folder:
+        return jsonify({"message": "No target folder found in the database"}), 500
 
     # Fetch credentials dynamically from the database
     credentials = fetch_latest_credentials()
     if not credentials:
-        function_running = False
         return jsonify({"message": "No credentials found in the database"}), 500
+
+    function_running = True
 
     # Start the function in a new thread
     task_thread = threading.Thread(target=monitor_folder, args=(target_folder, [credentials]))
     task_thread.start()
-    return jsonify({"message": "Function started", "credentials": credentials}), 200
+    return jsonify({"message": "Function started", "target_folder": target_folder, "credentials": credentials}), 200
 
 # Endpoint to check if the script is running
 @target_bp.route('/is-running', methods=['GET'])
@@ -37,12 +39,17 @@ def is_watcher_running():
         return jsonify({"message": "Function is running"}), 200
     else:
         return jsonify({"message": "Function is not running"}), 200
-    
+
+# Endpoint to fetch the last 10 recent files
 @target_bp.route('/fetchLastTen', methods=['GET'])
 def fetchLastTen():
-    files = get_recent_files()
-    return jsonify(files)
+    try:
+        files = get_recent_files()
+        return jsonify({"success": True, "data": files}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
+# Endpoint to fetch the latest scan results
 @target_bp.route('/latest', methods=['GET'])
 def get_latest_scans():
     """

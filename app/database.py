@@ -54,11 +54,9 @@ def init_db():
             CREATE TABLE IF NOT EXISTS settings (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 target_folder TEXT NOT NULL,
-                destination_folder TEXT NOT NULL,
                 quarantine_folder TEXT NOT NULL,
                 unsafe_file_action TEXT CHECK(unsafe_file_action IN ('delete', 'quarantine')) NOT NULL,
-                created_at TEXT DEFAULT (datetime('now')),
-                updated_at TEXT DEFAULT (datetime('now'))
+                created_at TEXT DEFAULT (datetime('now'))
             )
         ''')
 
@@ -77,7 +75,6 @@ def init_db():
 
         conn.commit()
 
-
 # Context manager for database connection
 def get_db():
     """Get a database connection."""
@@ -85,7 +82,6 @@ def get_db():
         g.db = sqlite3.connect(DATABASE)
         g.db.row_factory = sqlite3.Row  # Allows rows to be returned as dictionaries
     return g.db
-
 
 def fetch_latest_credentials():
     """
@@ -117,3 +113,36 @@ def fetch_latest_credentials():
     except Exception as e:
         print(f"Error fetching credentials: {e}")
         return None
+
+def fetch_target_folder():
+    """
+    Fetch the latest target folder path from the settings table.
+    """
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Query to fetch the target folder (latest entry)
+        cursor.execute("""
+            SELECT target_folder 
+            FROM settings 
+            ORDER BY id DESC 
+            LIMIT 1;
+        """)
+        row = cursor.fetchone()
+        
+        if row:
+            return row["target_folder"]  # Return the target folder path
+        else:
+            print("No target folder found in the database.")
+            return None
+    except Exception as e:
+        print(f"Error fetching target folder: {e}")
+        return None
+
+# Cleanup database connection after request
+def close_db(e=None):
+    """Close the database connection at the end of a request."""
+    db = g.pop('db', None)
+    if db is not None:
+        db.close()
