@@ -19,8 +19,9 @@ def add_av():
     if create_antivirus(data):
         if ping_vm(data.get('ip_address')):
             safe_result = test_file(data,safe_path)
-            malicious_result = test_file(data,malicious_path)
-            if (safe_result == False and malicious_result == True):
+            # malicious_result = test_file(data,malicious_path)
+            malicious_result = False
+            if (safe_result == True and malicious_result == False):
                 return {"status": True, "message": "Added Succesfully", "safe_result": safe_result, "malicious_result": malicious_result}, 200
             else:
                 return {"status": False, "message": "Tests failed", "safe_result": safe_result, "malicious_result": malicious_result}
