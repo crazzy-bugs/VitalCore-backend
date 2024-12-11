@@ -19,7 +19,7 @@ def create_target(data):
         cursor = conn.cursor()
         cursor.execute('''
             INSERT INTO settings (target_folder, quarantine_folder, unsafe_file_action) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?)
         ''', (target_folder, quarantine_folder, unsafe_file_action))
         conn.commit()
         return {"message": "Antivirus record created", "id": cursor.lastrowid}
