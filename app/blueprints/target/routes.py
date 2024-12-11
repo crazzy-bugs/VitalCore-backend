@@ -1,6 +1,6 @@
 from flask import jsonify, request
 import threading
-from .services import monitor_folder, get_recent_files, fetch_last_scan_results, create_target
+from .services import monitor_folder, get_recent_files, fetch_last_scan_results, create_target, changed_target, fetch_target_details
 from app.database import fetch_latest_credentials, fetch_target_folder  # Import fetch functions
 from . import target_bp
 
@@ -10,9 +10,18 @@ function_running = False
 
 
 @target_bp.route('/add', methods=['POST'])
-def add_av():
+def add_target():
     data = request.json
     return create_target(data)
+
+@target_bp.route('/add', methods=['PUT'])
+def update_target():
+    data = request.json
+    return changed_target(data)
+
+@target_bp.route('/view', methods=['GET'])
+def view_target():
+    return fetch_target_details()
 
 # Endpoint to run the script
 @target_bp.route('/run', methods=['POST'])

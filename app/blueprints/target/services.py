@@ -6,9 +6,43 @@ from fabric import Connection
 from app.database import get_db
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
-from flask import current_app
+from flask import current_app, jsonify
 
 results_lock = Lock()
+
+def changed_target(data):
+
+    target_folder = data.get('target_folder')
+    quarantine_folder = data.get('quarantine_folder')
+    unsafe_file_action = data.get('unsafe_file_action')    
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE settings
+            SET target_folder = ?, 
+                quarantine_folder = ?, 
+                unsafe_file_action = ?
+            WHERE id = 1
+        ''', (target_folder, quarantine_folder, unsafe_file_action))
+
+def fetch_target_details():
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM settings WHERE id = 1')
+        result = cursor.fetchone()
+        
+        if result:
+            data = {
+                "id": result[0],
+                "target_folder": result[1],
+                "quarantine_folder": result[2],
+                "unsafe_file_action": result[3],
+                "created_at": result[4]
+            }
+            return jsonify(data), 200
+        else:
+            return jsonify({"error": "No target added"}), 404
 
 def create_target(data):
     target_folder = data.get('target_folder')
@@ -17,10 +51,10 @@ def create_target(data):
 
     with get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO settings (target_folder, quarantine_folder, unsafe_file_action) 
+        cursor.execute(
+            """INSERT INTO settings (target_folder, quarantine_folder, unsafe_file_action) 
             VALUES (?, ?, ?)
-        ''', (target_folder, quarantine_folder, unsafe_file_action))
+        """, (target_folder, quarantine_folder, unsafe_file_action))
         conn.commit()
         return {"message": "Target created", "id": cursor.lastrowid}
 

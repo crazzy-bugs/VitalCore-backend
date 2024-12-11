@@ -55,7 +55,7 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 target_folder TEXT NOT NULL,
                 quarantine_folder TEXT NOT NULL,
-                unsafe_file_action TEXT CHECK(unsafe_file_action IN ('delete', 'quarantine')) NOT NULL,
+                unsafe_file_action TEXT CHECK(unsafe_file_action IN ('delete', 'quarantine')),
                 created_at TEXT DEFAULT (datetime('now'))
             )
         ''')
