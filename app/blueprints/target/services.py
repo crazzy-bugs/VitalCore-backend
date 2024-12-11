@@ -22,7 +22,7 @@ def create_target(data):
             VALUES (?, ?, ?)
         ''', (target_folder, quarantine_folder, unsafe_file_action))
         conn.commit()
-        return {"message": "Antivirus record created", "id": cursor.lastrowid}
+        return {"message": "Target created", "id": cursor.lastrowid}
 
 # Function to test a file for viruses using ClamAV
 def test_file(path, username, password, ip, avname):
@@ -46,16 +46,32 @@ def test_file(path, username, password, ip, avname):
         print("Sent the file")
 
         # Run ClamAV scan, allow non-zero exit codes with `warn=True`
-        result = conn.run(f'clamdscan {file} --fdpass', warn=True)
+        # result = conn.run(f'clamdscan {file} --fdpass', warn=True)
+        command = fr'"C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File C:\Users\{username}\{file}'
+        result = conn.run(command)
         print("Scan Completed")
 
         # Parse and return the result
-        parsed_result = parse_clamdscan_output(result.stdout)
+        parsed_result = parse_output(result)
         return {avname: parsed_result}
 
     except Exception as e:
         print(f"[ERROR] Exception occurred while scanning file {path}: {e}")
         return {avname: ("error", str(e))}
+
+def parse_output(result):
+    output = result.stdout.strip().lower()
+    # if ("found no threats" in output) or ("detected: files - 0" in output and "objects 0" in output):
+    if "found no threats" in output:
+        print("Scan completed: No threats detected.")
+        return "Scan completed: No threats detected."
+    # elif ("found" in output and "threats" in output) or ("detected: files -" in output or "result=" in output):
+    elif "found" in output and "threats" in output:
+        print("Scan completed: Threats detected!")
+        return "Scan completed: Threats detected!"
+    else:
+        print("Scan result could not be parsed.")
+        return None
 
 def parse_clamdscan_output(output):
     """
