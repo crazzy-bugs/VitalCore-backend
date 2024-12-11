@@ -47,7 +47,11 @@ def test_file(path, username, password, ip, avname):
 
         # Run ClamAV scan, allow non-zero exit codes with `warn=True`
         # result = conn.run(f'clamdscan {file} --fdpass', warn=True)
-        command = fr'"C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File C:\Users\{username}\{file}'
+        
+        av_commands = {'defender':fr'"C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File C:\Users\{username}\{file}'}
+
+        # command = fr'"C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File C:\Users\{username}\{file}'
+        command = av_commands[avname]
         result = conn.run(command)
         print("Scan Completed")
 
@@ -61,12 +65,12 @@ def test_file(path, username, password, ip, avname):
 
 def parse_output(result):
     output = result.stdout.strip().lower()
-    # if ("found no threats" in output) or ("detected: files - 0" in output and "objects 0" in output):
-    if "found no threats" in output:
+    if ("found no threats" in output) or ("detected: files - 0" in output and "objects 0" in output):
+    # if "found no threats" in output:
         print("Scan completed: No threats detected.")
         return "Scan completed: No threats detected."
-    # elif ("found" in output and "threats" in output) or ("detected: files -" in output or "result=" in output):
-    elif "found" in output and "threats" in output:
+    elif ("found" in output and "threats" in output) or ("detected: files -" in output or "result=" in output):
+    # elif "found" in output and "threats" in output:
         print("Scan completed: Threats detected!")
         return "Scan completed: Threats detected!"
     else:
