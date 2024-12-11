@@ -54,7 +54,9 @@ def test_file(data, path):
     conn.put(path, file)
     print("Sent the file")
     # result = conn.run(f'clamdscan {file} --fdpass')
-    command = fr'"C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File C:\Users\{username}\{file}'
+    av_commands = {"defender":fr'"C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File C:\Users\{username}\{file}', "clamav":f'clamdscan {file} --fdpass'}
+    # command = fr'"C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File C:\Users\{username}\{file}'
+    command = av_commands[avname]
     result = conn.run(command)
     print(result.stdout)
     parsed_result = parse_output(result)
