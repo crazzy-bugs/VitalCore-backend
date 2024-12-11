@@ -83,9 +83,41 @@ def get_db():
         g.db.row_factory = sqlite3.Row  # Allows rows to be returned as dictionaries
     return g.db
 
+# def fetch_latest_credentials():
+#     """
+#     Fetch the latest antivirus credentials (username, password, ip_address, av_name) from the av table.
+#     """
+#     try:
+#         conn = get_db()
+#         cursor = conn.cursor()
+        
+#         # Query to fetch the latest credentials based on the id (descending order)
+#         cursor.execute("""
+#             SELECT username, password, ip_address, av_name 
+#             FROM av 
+#             ORDER BY id DESC 
+#             LIMIT 1;
+#         """)
+#         row = cursor.fetchone()
+        
+#         if row:
+#             return {
+#                 "username": row["username"],
+#                 "password": row["password"],
+#                 "ipaddress": row["ip_address"],
+#                 "avname": row["av_name"]
+#             }
+#         else:
+#             print("No credentials found in the database.")
+#             return None  # If no rows exist
+#     except Exception as e:
+#         print(f"Error fetching credentials: {e}")
+#         return None
+
 def fetch_latest_credentials():
     """
     Fetch the latest antivirus credentials (username, password, ip_address, av_name) from the av table.
+    Returns an array of objects.
     """
     try:
         conn = get_db()
@@ -95,24 +127,30 @@ def fetch_latest_credentials():
         cursor.execute("""
             SELECT username, password, ip_address, av_name 
             FROM av 
-            ORDER BY id DESC 
-            LIMIT 1;
-        """)
-        row = cursor.fetchone()
+            ORDER BY id DESC;
+        """
+        )
+        rows = cursor.fetchall()
         
-        if row:
-            return {
-                "username": row["username"],
-                "password": row["password"],
-                "ipaddress": row["ip_address"],
-                "avname": row["av_name"]
-            }
+        if rows:
+            credentials = [
+                {
+                    "username": row[0],
+                    "password": row[1],
+                    "ipaddress": row[2],
+                    "avname": row[3]
+                } for row in rows
+            ]
+            print(credentials)
+            return credentials
         else:
             print("No credentials found in the database.")
-            return None  # If no rows exist
+            return []  # Return an empty array if no rows exist
+
     except Exception as e:
         print(f"Error fetching credentials: {e}")
-        return None
+        return []
+        
 
 def fetch_target_folder():
     """

@@ -62,23 +62,31 @@ def test_file(data, path):
     
     command = av_commands[avname]
     result = conn.run(command)
-    print(result.stdout)
+    # print(result.stdout)
     parsed_result = parse_output(result)
     return parsed_result
     
 def parse_output(result):
     output = result.stdout.strip().lower()
-    if ("found no threats" in output) or ("detected: files - 0" in output and "objects 0" in output):
+    clam_output = result.stdout.strip().splitlines()
+    if ("found no threats" in output) or ("detected: files - 0" in output and "objects 0" in output) or ("Infected files: 0" in output and "OK" in output):
     # if "found no threats" in output:
         print("Scan completed: No threats detected.")
         return True
-    elif ("found" in output and "threats" in output) or ("detected: files -" in output or "result=" in output):
+    elif ("found" in output and "threats" in output) or ("detected: files -" in output or "result=" in output) or ("Infected files" in output):
     # elif "found" in output and "threats" in output:
         print("Scan completed: Threats detected!")
         return False
-    else:
-        print("Scan result could not be parsed.")
-        return None
+    
+    for line in clam_output:
+        if line.endswith("OK"):
+            return True
+        if "FOUND" in line:
+            return False
+
+    # If no definitive result, return unknown status
+    print("Scan result could not be parsed.")
+    return None
 
 def parse_clamdscan_output(output):
     """

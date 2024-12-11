@@ -101,6 +101,7 @@ def test_file(path, username, password, ip, avname):
 
 def parse_output(result):
     output = result.stdout.strip().lower()
+    clam_output = result.stdout.strip().splitlines()
     if ("found no threats" in output) or ("detected: files - 0" in output and "objects 0" in output) or ("Infected files: 0" in output and "OK" in output):
     # if "found no threats" in output:
         print("Scan completed: No threats detected.")
@@ -109,9 +110,19 @@ def parse_output(result):
     # elif "found" in output and "threats" in output:
         print("Scan completed: Threats detected!")
         return "Scan completed: Threats detected!"
-    else:
-        print("Scan result could not be parsed.")
-        return None
+    
+    for line in clam_output:
+        if line.endswith("OK"):
+            return "Scan completed: No threats detected."
+        if "FOUND" in line:
+            return "Scan completed: Threats detected!"
+
+    # If no definitive result, return unknown status
+    return "Scan result could not be parsed."
+    
+    # else:
+    #     print("Scan result could not be parsed.")
+    #     return None
 
 def parse_clamdscan_output(output):
     """

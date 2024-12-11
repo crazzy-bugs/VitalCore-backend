@@ -43,7 +43,7 @@ def run_watcher():
     function_running = True
 
     # Start the function in a new thread
-    task_thread = threading.Thread(target=monitor_folder, args=(target_folder, [credentials]))
+    task_thread = threading.Thread(target=monitor_folder, args=(target_folder, credentials))
     task_thread.start()
     return jsonify({"message": "Function started", "target_folder": target_folder, "credentials": credentials}), 200
 
