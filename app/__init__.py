@@ -6,10 +6,11 @@ from flask import Flask
 from .blueprints.target import target_bp
 from .blueprints.antivirus import antivirus_bp
 from .database import init_db
+from flask_cors import CORS
 
 def create_app():
     app = Flask(__name__)
-    # app.config.from_object('app.config.Config')
+    CORS(app)
 # Initialize the database
     init_db()
     app.register_blueprint(target_bp, url_prefix='/target')
