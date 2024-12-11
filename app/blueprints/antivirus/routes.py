@@ -30,6 +30,10 @@ def add_av():
     else:
         return {"status": False, "message": "Failed to add system", "safe_result": "", "malicious_result": ""}, 400
 
+# @antivirus_bp.route('/status', methods=['GET'])
+#     data = request.json
+# def av_status(data)
+
 @antivirus_bp.route('/fetch/all', methods=['GET'])
 def fetch_av():
     search = request.args.get('search')
