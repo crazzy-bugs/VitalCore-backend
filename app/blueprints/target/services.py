@@ -147,7 +147,7 @@ def test_file(path, username, password, ip, avname):
         # Use os.path.basename and properly quote the path
         file = os.path.basename(path)
         quoted_local_path = f'"{path}"'
-        quoted_remote_file = f'"{os.path.join("C:/Users", username, file)}"'
+        # quoted_remote_file = f'"{os.path.join("C:/Users", username, file)}"'
         print("Connected to system")
 
         # Send the file to the remote system with proper quoting
@@ -155,11 +155,11 @@ def test_file(path, username, password, ip, avname):
         print("Sent the file")
 
         av_commands = {
-            'defender': fr'"C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File {quoted_remote_file}',
-            'eset': fr'"C:\Program Files\ESET\ESET Security\ecls.exe" {quoted_remote_file}',
+            'defender': fr'"C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File C:\Users\{username}\{file}',
+            'eset': fr'"C:\Program Files\ESET\ESET Security\ecls.exe" C:\Users\{username}\{file}',
             'clamav': f'clamdscan "{file}" --fdpass',
             'avg': f'docker run --rm -v "/home/{username}":/malware malice/avg /malware/"{file}"',
-            'fsecure': fr'"C:\Program Files\F-Secure\TOTAL\fsscan.exe" {quoted_remote_file}'
+            'fsecure': fr'"C:\Program Files\F-Secure\TOTAL\fsscan.exe" C:\Users\{username}\{file}'
         }
 
         command = av_commands[avname]
