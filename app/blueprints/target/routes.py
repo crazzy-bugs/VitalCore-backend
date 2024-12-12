@@ -1,6 +1,6 @@
 from flask import jsonify, request
 import threading
-from .services import monitor_folder, get_recent_files, fetch_last_scan_results, create_target, changed_target, fetch_target_details
+from .services import monitor_folder, fetch_last_scan_results, create_target, changed_target, fetch_target_details
 from app.database import fetch_latest_credentials, fetch_target_folder  # Import fetch functions
 from . import target_bp
 
@@ -56,13 +56,13 @@ def is_watcher_running():
         return jsonify({"message": "Function is not running"}), 200
 
 # Endpoint to fetch the last 10 recent files
-@target_bp.route('/fetchLastTen', methods=['GET'])
-def fetchLastTen():
-    try:
-        files = get_recent_files()
-        return jsonify({"success": True, "data": files}), 200
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+# @target_bp.route('/fetchLastTen', methods=['GET'])
+# def fetchLastTen():
+#     try:
+#         files = get_recent_files()
+#         return jsonify({"success": True, "data": files}), 200
+#     except Exception as e:
+#         return jsonify({"success": False, "error": str(e)}), 500
 
 # Endpoint to fetch the latest scan results
 @target_bp.route('/latest', methods=['GET'])

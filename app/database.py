@@ -12,17 +12,27 @@ def init_db():
         # Table for scans
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS scans (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                filename TEXT NOT NULL,
-                filepath TEXT NOT NULL,
-                timestamp INTEGER NOT NULL,
-                avname TEXT DEFAULT NULL,
-                result TEXT DEFAULT NULL,
-                scan_logs TEXT DEFAULT NULL,
-                created_at TEXT DEFAULT (datetime('now')),
-                updated_at TEXT DEFAULT (datetime('now'))
-            )
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            filename TEXT,
+            filepath TEXT,
+            timestamp INTEGER,
+            av_results TEXT,  -- JSON string of antivirus results
+            final_result TEXT  -- Overall result (Safe/Unsafe)
+)
         ''')
+        # cursor.execute('''
+        #     CREATE TABLE IF NOT EXISTS scans (
+        #         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        #         filename TEXT NOT NULL,
+        #         filepath TEXT NOT NULL,
+        #         timestamp INTEGER NOT NULL,
+        #         avname TEXT DEFAULT NULL,
+        #         result TEXT DEFAULT NULL,
+        #         scan_logs TEXT DEFAULT NULL,
+        #         created_at TEXT DEFAULT (datetime('now')),
+        #         updated_at TEXT DEFAULT (datetime('now'))
+        #     )
+        # ''')
 
         # Table for notifications
         cursor.execute('''
