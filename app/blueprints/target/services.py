@@ -84,7 +84,7 @@ def test_file(path, username, password, ip, avname):
         # result = conn.run(f'clamdscan {file} --fdpass', warn=True)
         
         av_commands = {'defender':fr'"C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File C:\Users\{username}\{file}',
-                       'eset': fr'C:\"Program Files"\ESET\ESET Security\ecls.exe "C:\Users\{username}\{file}"',
+                       'eset': fr'"C:\Program Files\ESET\ESET Security\ecls.exe" "C:\Users\{username}\{file}"',
                        'clamav':fr'clamdscan {file} --fdpass',
                        'avg': fr'docker run --rm -v /home/{username}:/malware malice/avg /malware/{file}',
                        'fsecure': fr'"C:\Program Files\F-Secure\TOTAL\fsscan.exe" "{file}"'}

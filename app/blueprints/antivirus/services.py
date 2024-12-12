@@ -58,7 +58,7 @@ def test_file(data, path):
     # av_commands = {"defender":fr'"C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File C:\Users\{username}\{file}', "clamav":f'clamdscan {file} --fdpass'}
     # command = fr'"C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File C:\Users\{username}\{file}'
     av_commands = {'defender':fr'"C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File C:\Users\{username}\{file}',
-                       'eset': fr'C:\Program Files\ESET\ESET Security\ecls.exe "C:\Users\{username}\{file}"',
+                       'eset': fr'"C:\Program Files\ESET\ESET Security\ecls.exe" "C:\Users\{username}\{file}"',
                        'clamav':fr'clamdscan {file} --fdpass',
                        'avg': fr'docker run --rm -v /home/{username}:/malware malice/avg /malware/{file}',
                        'fsecure': fr'"C:\Program Files\F-Secure\TOTAL\fsscan.exe" "{file}"'}
