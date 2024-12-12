@@ -4,6 +4,7 @@ import platform
 from fabric import Connection
 import os
 import json
+import re
 
 def create_antivirus(data):
     av_name = data.get('av_name')
@@ -58,10 +59,16 @@ def test_file(data, path):
     # command = fr'"C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File C:\Users\{username}\{file}'
     av_commands = {'defender':fr'"C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File C:\Users\{username}\{file}',
                        'eset': fr'C:\Program Files\ESET\ESET Security\ecls.exe "C:\Users\{username}\{file}"',
-                       'clamav':fr'clamdscan {file} --fdpass'}
+                       'clamav':fr'clamdscan {file} --fdpass',
+                       'avg': fr'docker run --rm -v /home/{username}:/malware malice/avg /malware/{file}',
+                       'fsecure': fr'"C:\Program Files\F-Secure\TOTAL\fsscan.exe" "{file}"'}
     
     command = av_commands[avname]
     result = conn.run(command)
+    output = result.stdout.strip()
+    # AVG JSON parsing
+    if output.startswith('{') and output.endswith('}'):
+        return parse_avg_output(output)
     # print(result.stdout)
     parsed_result = parse_output(result)
     return parsed_result
@@ -87,6 +94,28 @@ def parse_output(result):
     # If no definitive result, return unknown status
     print("Scan result could not be parsed.")
     return None
+
+def parse_avg_output(output):
+    """
+    Parse AVG antivirus output.
+    
+    Args:
+        output (str): Raw output from AVG scan
+    
+    Returns:
+        bool or None: Parsing result
+    """
+    try:
+        # Try to parse JSON format
+        import json
+        avg_result = json.loads(output)
+        return not avg_result.get('avg', {}).get('infected', False)
+    except json.JSONDecodeError:
+        # Fallback to regex parsing if JSON fails
+        infected_pattern = r'Found\s+.*'
+        if re.search(infected_pattern, output):
+            return False
+        return True
 
 def parse_clamdscan_output(output):
     """

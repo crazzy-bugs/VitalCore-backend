@@ -75,3 +75,15 @@ def get_latest_scans():
         return jsonify({"success": True, "data": results}), 200
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+# # get latest by id
+# @target_bp.route('/latest/<id>', methods=['GET'])
+# def get_latest_by_id(id):
+#     """
+#     Endpoint to fetch the last 10 scan results.
+#     """
+#     try:
+#         results = fetch_last_scan_results(limit=10, id=id)
+#         return jsonify({"success": True, "data": results}), 200
+#     except Exception as e:
+#         return jsonify({"success": False, "error": str(e)}), 500

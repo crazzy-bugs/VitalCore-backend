@@ -7,6 +7,7 @@ from app.database import get_db
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
 from flask import current_app, jsonify
+import re
 
 results_lock = Lock()
 
@@ -83,13 +84,20 @@ def test_file(path, username, password, ip, avname):
         # result = conn.run(f'clamdscan {file} --fdpass', warn=True)
         
         av_commands = {'defender':fr'"C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File C:\Users\{username}\{file}',
-                       'eset': fr'C:\Program Files\ESET\ESET Security\ecls.exe "C:\Users\{username}\{file}"',
-                       'clamav':fr'clamdscan {file} --fdpass'}
+                       'eset': fr'C:\"Program Files"\ESET\ESET Security\ecls.exe "C:\Users\{username}\{file}"',
+                       'clamav':fr'clamdscan {file} --fdpass',
+                       'avg': fr'docker run --rm -v /home/{username}:/malware malice/avg /malware/{file}',
+                       'fsecure': fr'"C:\Program Files\F-Secure\TOTAL\fsscan.exe" "{file}"'}
 
         # command = fr'"C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File C:\Users\{username}\{file}'
         command = av_commands[avname]
         result = conn.run(command)
         print("Scan Completed")
+        output = result.stdout.strip()
+    # AVG JSON parsing
+        if output.startswith('{') and output.endswith('}'):
+            parsed_result = parse_avg_output(output)
+            return {avname: parsed_result}
 
         # Parse and return the result
         parsed_result = parse_output(result)
@@ -123,6 +131,31 @@ def parse_output(result):
     # else:
     #     print("Scan result could not be parsed.")
     #     return None
+
+def parse_avg_output(output):
+    """
+    Parse AVG antivirus output.
+    
+    Args:
+        output (str): Raw output from AVG scan
+    
+    Returns:
+        bool or None: Parsing result
+    """
+    try:
+        # Try to parse JSON format
+        import json
+        avg_result = json.loads(output)
+        # return not avg_result.get('avg', {}).get('infected', False)
+        if not avg_result.get('avg', {}).get('infected', False):
+            return "Scan completed: No threats detected."
+    except json.JSONDecodeError:
+        # Fallback to regex parsing if JSON fails
+        infected_pattern = r'Found\s+.*'
+        if re.search(infected_pattern, output):
+            return "Scan completed: Threats detected!"
+        return "Scan completed: No threats detected."
+    
 
 def parse_clamdscan_output(output):
     """
@@ -202,10 +235,16 @@ def process_existing_files(folder_path, credentials):
     """
     Scans all existing files in the folder.
     """
-    for file_name in os.listdir(folder_path):
-        file_path = os.path.join(folder_path, file_name)
-        if os.path.isfile(file_path):
-            FileHandler(credentials, None).process_file(file_path)
+    # for file_name in os.listdir(folder_path):
+    #     file_path = os.path.join(folder_path, file_name)
+    #     if os.path.isfile(file_path):
+    #         FileHandler(credentials, None).process_file(file_path)
+    for root, dirs, files in os.walk(folder_path):
+        for file_name in files:
+            file_path = os.path.join(root, file_name)
+            # Ensure we're processing files, not directories
+            if os.path.isfile(file_path):
+                FileHandler(credentials, None).process_file(file_path)
 
 # Main function to monitor the folder
 def monitor_folder(folder_path, credentials):
@@ -217,7 +256,7 @@ def monitor_folder(folder_path, credentials):
 
     event_handler = FileHandler(credentials, None)
     observer = Observer()
-    observer.schedule(event_handler, folder_path, recursive=False)
+    observer.schedule(event_handler, folder_path, recursive=True)
     observer.start()
     print(f"Monitoring folder: {folder_path}")
 
