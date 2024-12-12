@@ -124,9 +124,18 @@ def parse_output(result):
             return "Scan completed: No threats detected."
         if "FOUND" in line:
             return "Scan completed: Threats detected!"
+    
+    for line in clam_output:
+        if "detected: files -" in line or "cleaned: files -" in line:
+            if not line.endswith("0"):
+                print("Scan completed: Threats detected!")
+                return "Scan completed: Threats detected!"
 
     # If no definitive result, return unknown status
-    return "Scan result could not be parsed."
+    # print("Scan completed: No threats detected.")
+    return "Scan completed: No threats detected."
+    # If no definitive result, return unknown status
+    # return "Scan result could not be parsed."
     
     # else:
     #     print("Scan result could not be parsed.")
